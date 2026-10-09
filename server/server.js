@@ -12,7 +12,11 @@ const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/unity_demo';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // for demo; restrict to your GitHub Pages URL later
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -44,16 +48,23 @@ app.get('/api/cities', async (req, res) => {
   }
 });
 
-// POST create city (Admin panel uses this)
+// server.js — updated POST /api/cities
 app.post('/api/cities', upload.single('image'), async (req, res) => {
   try {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const fullImageUrl = req.file
+      ? `${proto}://${host}/uploads/${req.file.filename}`
+      : '';
+
     const cityData = {
       name: req.body.name,
       country: req.body.country,
       description: req.body.description,
       population: parseInt(req.body.population),
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : ''
+      imageUrl: fullImageUrl
     };
+
     const city = new City(cityData);
     await city.save();
     res.status(201).json(city);
